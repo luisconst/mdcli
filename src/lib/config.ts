@@ -44,12 +44,6 @@ export function setAuth(auth: AuthConfig): void {
   saveConfig(config);
 }
 
-export function clearAuth(): void {
-  const config = loadConfig();
-  delete config.auth;
-  saveConfig(config);
-}
-
 export function hasAuth(): boolean {
   return getAuth() !== null;
 }

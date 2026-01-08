@@ -15,7 +15,7 @@ export interface ApiHeaders {
   Mduid: string;
 }
 
-export interface CategoryDfcDre {
+interface CategoryDfcDre {
   id: number;
   tipo: string[];
   label: string;
@@ -26,7 +26,7 @@ export interface CategoryMeta {
   dre: CategoryDfcDre[];
 }
 
-export interface CategoryPermissions {
+interface CategoryPermissions {
   visivel: boolean;
   acoes: {
     editar: boolean;
@@ -87,7 +87,7 @@ export interface NormalizedCategory {
   system: boolean;
 }
 
-export interface AccountTypeMeta {
+interface AccountTypeMeta {
   id: number;
   nome: string;
   liquidez?: number;
@@ -98,12 +98,12 @@ export interface AccountTypeMeta {
   finalidades?: number[];
 }
 
-export interface AccountGroupMeta {
+interface AccountGroupMeta {
   id: number;
   nome: string;
 }
 
-export interface AccountFinalidadeMeta {
+interface AccountFinalidadeMeta {
   id: number;
   nome: string;
 }
@@ -114,14 +114,14 @@ export interface AccountMeta {
   finalidades: AccountFinalidadeMeta[];
 }
 
-export interface AccountBank {
+interface AccountBank {
   id: string;
   nome: string;
   img: string;
   tipo: string[];
 }
 
-export interface AccountPermissions {
+interface AccountPermissions {
   visivel: boolean;
   acoes: {
     editar: boolean;
@@ -177,7 +177,7 @@ export interface NormalizedAccount {
   closed: boolean;
 }
 
-export interface Tag {
+interface Tag {
   id: number;
   nome: string;
   status: boolean;
