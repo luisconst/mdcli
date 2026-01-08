@@ -4,6 +4,46 @@ import chalk from 'chalk';
 import { logger } from '../utils/logger.js';
 import { fetchEntries, normalizeEntries } from '../lib/api.js';
 
+const STATUS_FLAGS: Record<string, number> = {
+  pending: 1,
+  confirmed: 2,
+  reconciled: 4,
+  scheduled: 8,
+};
+
+const TYPE_FLAGS: Record<string, number> = {
+  expense: 1,
+  income: 2,
+  'transfer-out': 4,
+  'transfer-in': 8,
+};
+
+function parseStatusFilter(input: string): number {
+  const num = Number(input);
+  if (!Number.isNaN(num) && num >= 0 && num <= 15) return num;
+
+  return input.split(',').reduce((mask, name) => {
+    const flag = STATUS_FLAGS[name.trim().toLowerCase()];
+    if (!flag) {
+      logger.warning(`Unknown status: ${name}. Valid: pending, confirmed, reconciled, scheduled`);
+    }
+    return mask | (flag ?? 0);
+  }, 0);
+}
+
+function parseTypeFilter(input: string): number {
+  const num = Number(input);
+  if (!Number.isNaN(num) && num >= 0 && num <= 15) return num;
+
+  return input.split(',').reduce((mask, name) => {
+    const flag = TYPE_FLAGS[name.trim().toLowerCase()];
+    if (!flag) {
+      logger.warning(`Unknown type: ${name}. Valid: expense, income, transfer-out, transfer-in`);
+    }
+    return mask | (flag ?? 0);
+  }, 0);
+}
+
 function formatCurrency(value: number): string {
   const formatted = Math.abs(value).toLocaleString('pt-BR', {
     style: 'currency',
@@ -49,6 +89,11 @@ interface ListOptions {
   from?: string;
   to?: string;
   status?: string;
+  type?: string;
+  category?: string;
+  tag?: string;
+  keywords?: string;
+  value?: string;
 }
 
 async function listAction(options: ListOptions): Promise<void> {
@@ -62,18 +107,25 @@ async function listAction(options: ListOptions): Promise<void> {
 
     const { startDate: defaultStart, endDate: defaultEnd } = getDefaultDateRange();
 
+    const categoryIds = options.category ? options.category.split(',').map(Number) : undefined;
+    const tagIds = options.tag ? options.tag.split(',').map(Number) : undefined;
+    const status = options.status ? parseStatusFilter(options.status) : undefined;
+    const entryType = options.type ? parseTypeFilter(options.type) : undefined;
+    const value = options.value ? Number(options.value) : undefined;
+
     const response = await fetchEntries({
       accountIds,
       startDate: options.from ?? defaultStart,
       endDate: options.to ?? defaultEnd,
+      categoryIds,
+      tagIds,
+      keywords: options.keywords,
+      value,
+      status,
+      entryType,
     });
 
-    let entries = normalizeEntries(response);
-
-    if (options.status) {
-      const statusFilter = options.status.toLowerCase();
-      entries = entries.filter((e) => e.status === statusFilter);
-    }
+    const entries = normalizeEntries(response);
 
     if (options.json) {
       console.log(JSON.stringify(entries, null, 2));
@@ -117,6 +169,11 @@ entriesCommand
   .requiredOption('-a, --account <ids>', 'Account ID(s), comma-separated for multiple')
   .option('-f, --from <date>', 'Start date (YYYY-MM-DD), defaults to first day of current month')
   .option('-t, --to <date>', 'End date (YYYY-MM-DD), defaults to last day of current month')
-  .option('-s, --status <status>', 'Filter by status: reconciled, pending, scheduled')
+  .option('-s, --status <filter>', 'Filter by status: pending, confirmed, reconciled, scheduled (or bitmask 0-15)')
+  .option('-T, --type <filter>', 'Filter by type: expense, income, transfer-out, transfer-in (or bitmask 0-15)')
+  .option('-c, --category <ids>', 'Filter by category ID(s), comma-separated')
+  .option('-g, --tag <ids>', 'Filter by tag ID(s), comma-separated')
+  .option('-k, --keywords <text>', 'Search by keywords')
+  .option('-v, --value <amount>', 'Filter by value')
   .option('--json', 'Output as JSON')
   .action(listAction);

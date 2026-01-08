@@ -85,9 +85,26 @@ export async function fetchEntries(params: EntriesParams): Promise<EntriesRespon
     moeda: '1',
     ordenarMesmaData: '4',
     pendentesPresente: 'true',
-    status: '15',
+    status: (params.status ?? 15).toString(),
+    tipoLancamento: (params.entryType ?? 15).toString(),
     type: 'list',
   });
+
+  if (params.categoryIds?.length) {
+    queryParams.set('categorias', JSON.stringify({ ids: params.categoryIds.map(String) }));
+  }
+
+  if (params.tagIds?.length) {
+    queryParams.set('tags', JSON.stringify({ ids: params.tagIds.map(String) }));
+  }
+
+  if (params.keywords) {
+    queryParams.set('palavras', params.keywords);
+  }
+
+  if (params.value !== undefined) {
+    queryParams.set('valor', params.value.toString());
+  }
 
   return apiRequest<EntriesResponse>(`/v2/lancamentos?${queryParams.toString()}`);
 }

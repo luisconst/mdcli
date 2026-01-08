@@ -281,6 +281,12 @@ export interface EntriesParams {
   includeFaturas?: boolean;
   pageSize?: number;
   page?: number;
+  categoryIds?: number[];
+  tagIds?: number[];
+  keywords?: string;
+  value?: number;
+  status?: number;
+  entryType?: number;
 }
 
 export interface NormalizedEntry {
