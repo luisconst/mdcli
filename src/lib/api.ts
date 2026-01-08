@@ -9,7 +9,9 @@ import type {
   NormalizedCategory,
   NormalizedAccount,
   NormalizedTag,
-  NormalizedEntry
+  NormalizedEntry,
+  CreateEntryPayload,
+  CreateEntryResponse,
 } from '../types/index.js';
 import { getAuth } from './config.js';
 
@@ -48,6 +50,38 @@ async function apiRequest<T>(endpoint: string): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+async function apiPost<T, R>(endpoint: string, body: T): Promise<R> {
+  const auth = getAuth();
+  if (!auth) {
+    throw new Error('Not authenticated. Run "mdcli auth login" first.');
+  }
+
+  const headers = buildHeaders(auth);
+  const url = `${BASE_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(headers as unknown as Record<string, string>),
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Accept': 'application/json, text/plain, */*',
+      'Origin': 'https://app.meudinheiroweb.com.br',
+      'Referer': 'https://app.meudinheiroweb.com.br/',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Authentication expired. Run "mdcli auth login" to re-authenticate.');
+    }
+    const errorText = await response.text();
+    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  return response.json() as Promise<R>;
 }
 
 export async function fetchCategories(): Promise<CategoriesResponse> {
@@ -170,4 +204,8 @@ export function normalizeEntries(response: EntriesResponse): NormalizedEntry[] {
     categoryId: entry.categoria ?? null,
     installment: entry.parcela ?? null,
   }));
+}
+
+export async function createEntry(payload: CreateEntryPayload): Promise<CreateEntryResponse> {
+  return apiPost<CreateEntryPayload, CreateEntryResponse>('/v1/lancamentos', payload);
 }

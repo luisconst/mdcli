@@ -2,7 +2,8 @@ import { Command } from 'commander';
 import Table from 'cli-table3';
 import chalk from 'chalk';
 import { logger } from '../utils/logger.js';
-import { fetchEntries, normalizeEntries } from '../lib/api.js';
+import { fetchEntries, normalizeEntries, createEntry } from '../lib/api.js';
+import type { CreateEntryPayload, CreateEntryAgenda } from '../types/index.js';
 
 const STATUS_FLAGS: Record<string, number> = {
   pending: 1,
@@ -177,3 +178,170 @@ entriesCommand
   .option('-v, --value <amount>', 'Filter by value')
   .option('--json', 'Output as JSON')
   .action(listAction);
+
+interface CreateOptions {
+  account: string;
+  description: string;
+  value: string;
+  type?: string;
+  category?: string;
+  date?: string;
+  tags?: string;
+  notes?: string;
+  pending?: boolean;
+  repeat?: string;
+  frequency?: string;
+  times?: string;
+  json?: boolean;
+}
+
+const INTERVAL_MAP: Record<string, 'd' | 'w' | 'M' | 'y'> = {
+  daily: 'd',
+  weekly: 'w',
+  monthly: 'M',
+  yearly: 'y',
+  d: 'd',
+  w: 'w',
+  m: 'M',
+  y: 'y',
+};
+
+function parseRecurrence(options: CreateOptions): CreateEntryAgenda | undefined {
+  if (!options.repeat) return undefined;
+
+  const intervalo = INTERVAL_MAP[options.repeat.toLowerCase()];
+  if (!intervalo) {
+    logger.error(`Invalid repeat interval: ${options.repeat}. Valid: daily, weekly, monthly, yearly (or d, w, m, y)`);
+    process.exit(1);
+  }
+
+  if (options.frequency && options.times) {
+    logger.error('Cannot use --frequency and --times together. Use --frequency for interval spacing OR --times for total occurrences.');
+    process.exit(1);
+  }
+
+  return {
+    repeticao: 'f',
+    intervalo,
+    quantidade: options.times ? Number(options.times) : -1,
+    frequencia: options.frequency ? Number(options.frequency) : 1,
+    inicial: 1,
+  };
+}
+
+function getMonthRange(): { start: string; end: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0],
+  };
+}
+
+function mapTypeToApi(type: string): 'd' | 'r' | 't' {
+  const typeMap: Record<string, 'd' | 'r' | 't'> = {
+    expense: 'd',
+    income: 'r',
+    transfer: 't',
+    d: 'd',
+    r: 'r',
+    t: 't',
+  };
+  return typeMap[type.toLowerCase()] ?? 'd';
+}
+
+async function createAction(options: CreateOptions): Promise<void> {
+  try {
+    const value = Number(options.value);
+    if (Number.isNaN(value)) {
+      logger.error('Invalid value. Must be a number.');
+      process.exit(1);
+    }
+
+    const tipo = mapTypeToApi(options.type ?? 'expense');
+    const isReconciled = !options.pending;
+    const now = new Date();
+    const dateStr = options.date ?? now.toISOString().split('T')[0];
+    const { start: monthStart, end: monthEnd } = getMonthRange();
+    const expenseNeedsNegativeValue = tipo === 'd';
+    const finalValue = expenseNeedsNegativeValue ? -Math.abs(value) : Math.abs(value);
+    const agenda = parseRecurrence(options);
+
+    const payload: CreateEntryPayload = {
+      descricao: options.description,
+      tipo,
+      status: {
+        confirmado: true,
+        conciliado: isReconciled,
+      },
+      exibirCp: true,
+      exibirCr: true,
+      automatico: false,
+      lembrete: 0,
+      anexos: [],
+      ...(agenda && { agenda }),
+      '#': null,
+      conta: options.account,
+      inicio: monthStart,
+      fim: monthEnd,
+      i: 'm',
+      valor: finalValue,
+      data: now.toISOString(),
+      base: null,
+      categoria: options.category ? Number(options.category) : null,
+      metaEconomia: null,
+      observacoes: options.notes ?? '',
+      tags: options.tags ? options.tags.split(',').map(Number) : [],
+      transferencia: false,
+      conciliado: isReconciled,
+      dataEfetiva: dateStr,
+      dataPrevista: dateStr,
+      valorEfetivo: finalValue,
+      valorPrevisto: finalValue,
+    };
+
+    const response = await createEntry(payload);
+
+    if (options.json) {
+      console.log(JSON.stringify(response, null, 2));
+      return;
+    }
+
+    logger.success(`Entry created successfully!`);
+    console.log(`  ${chalk.gray('ID:')} ${response.id}`);
+    console.log(`  ${chalk.gray('Description:')} ${response.descricao}`);
+    console.log(`  ${chalk.gray('Value:')} ${formatCurrency(response.valor)}`);
+    console.log(`  ${chalk.gray('Date:')} ${response.data}`);
+    const statusDisplay = response.status === 'conciliado' ? 'reconciled' 
+      : response.status === 'pendente' ? 'pending' : 'scheduled';
+    console.log(`  ${chalk.gray('Status:')} ${formatStatus(statusDisplay as 'reconciled' | 'pending' | 'scheduled')}`);
+    if (agenda) {
+      const intervalLabels: Record<string, string> = { d: 'daily', w: 'weekly', M: 'monthly', y: 'yearly' };
+      const timesLabel = agenda.quantidade === -1 ? 'infinite' : `${agenda.quantidade} times`;
+      console.log(`  ${chalk.gray('Recurrence:')} ${intervalLabels[agenda.intervalo]} (every ${agenda.frequencia}, ${timesLabel})`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(message);
+    process.exit(1);
+  }
+}
+
+entriesCommand
+  .command('create')
+  .description('Create a new entry')
+  .requiredOption('-a, --account <id>', 'Account ID')
+  .requiredOption('-d, --description <text>', 'Entry description')
+  .requiredOption('-v, --value <amount>', 'Entry value (positive number)')
+  .option('-T, --type <type>', 'Entry type: expense, income, transfer (default: expense)', 'expense')
+  .option('-c, --category <id>', 'Category ID')
+  .option('-D, --date <date>', 'Entry date (YYYY-MM-DD), defaults to today')
+  .option('-g, --tags <ids>', 'Tag ID(s), comma-separated')
+  .option('-n, --notes <text>', 'Additional notes/observations')
+  .option('-p, --pending', 'Create as pending (not reconciled)')
+  .option('-r, --repeat <interval>', 'Recurrence: daily, weekly, monthly, yearly (or d, w, m, y)')
+  .option('--frequency <n>', 'Repeat every N intervals, e.g. --frequency 2 = every 2 months (default: 1)')
+  .option('--times <n>', 'Total occurrences, e.g. --times 6 = 6 times then stop (default: infinite)')
+  .option('--json', 'Output as JSON')
+  .action(createAction);

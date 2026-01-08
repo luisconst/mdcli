@@ -300,3 +300,72 @@ export interface NormalizedEntry {
   categoryId: number | null;
   installment: string | null;
 }
+
+export interface CreateEntryStatus {
+  confirmado: boolean;
+  conciliado: boolean;
+}
+
+export interface CreateEntryAgenda {
+  repeticao: 'f';
+  intervalo: 'd' | 'w' | 'M' | 'y';
+  quantidade: number;
+  frequencia: number;
+  inicial: number;
+}
+
+export interface CreateEntryPayload {
+  descricao: string;
+  tipo: 'd' | 'r' | 't';
+  status: CreateEntryStatus;
+  exibirCp: boolean;
+  exibirCr: boolean;
+  automatico: boolean;
+  lembrete: number;
+  anexos: unknown[];
+  agenda?: CreateEntryAgenda;
+  '#': string | null;
+  conta: string;
+  inicio: string;
+  fim: string;
+  i: string;
+  valor: number;
+  data: string;
+  base: string | null;
+  categoria: number | null;
+  metaEconomia: number | null;
+  observacoes: string;
+  tags: number[];
+  transferencia: boolean;
+  conciliado: boolean;
+  dataEfetiva: string;
+  dataPrevista: string;
+  valorEfetivo: number;
+  valorPrevisto: number;
+}
+
+export interface CreateEntryResponse {
+  id: number;
+  descricao: string;
+  conciliado: boolean;
+  dataCompetencia: string;
+  status: string;
+  tipo: 'd' | 'r' | 't';
+  valor: number;
+  valorPrevisto: number;
+  valorEfetivo: number;
+  data: string;
+  dataPrevista: string;
+  dataEfetiva: string;
+  dataCriacao: string;
+  exibirCp: boolean;
+  exibirCr: boolean;
+  permissoes: EntryPermissions;
+  estorno: boolean;
+  conta: number;
+  categoria: number | null;
+  tags: number[];
+  observacoes: string;
+  lembrete: string;
+  automatico: boolean;
+}
