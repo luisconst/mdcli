@@ -1,16 +1,19 @@
-import type { 
-  ApiHeaders, 
-  AuthConfig, 
-  CategoriesResponse, 
-  AccountsResponse, 
+import type {
+  ApiHeaders,
+  AuthConfig,
+  CategoriesResponse,
+  AccountsResponse,
   TagsResponse,
+  EntriesResponse,
+  EntriesParams,
   NormalizedCategory,
   NormalizedAccount,
-  NormalizedTag
+  NormalizedTag,
+  NormalizedEntry
 } from '../types/index.js';
 import { getAuth } from './config.js';
 
-const BASE_URL = 'https://app.meudinheiroweb.com.br/api/v1';
+const BASE_URL = 'https://app.meudinheiroweb.com.br/api';
 
 function buildHeaders(auth: AuthConfig): ApiHeaders {
   return {
@@ -48,15 +51,45 @@ async function apiRequest<T>(endpoint: string): Promise<T> {
 }
 
 export async function fetchCategories(): Promise<CategoriesResponse> {
-  return apiRequest<CategoriesResponse>('/cadastros/categorias?meta=true&paginate=false');
+  return apiRequest<CategoriesResponse>('/v1/cadastros/categorias?meta=true&paginate=false');
 }
 
 export async function fetchAccounts(): Promise<AccountsResponse> {
-  return apiRequest<AccountsResponse>('/cadastros/contas?meta=true&paginate=false');
+  return apiRequest<AccountsResponse>('/v1/cadastros/contas?meta=true&paginate=false');
 }
 
 export async function fetchTags(): Promise<TagsResponse> {
-  return apiRequest<TagsResponse>('/cadastros/tags?paginate=false');
+  return apiRequest<TagsResponse>('/v1/cadastros/tags?paginate=false');
+}
+
+export async function fetchEntries(params: EntriesParams): Promise<EntriesResponse> {
+  const contas = JSON.stringify({
+    faturas: params.includeFaturas ?? true,
+    ids: params.accountIds,
+  });
+
+  const list = JSON.stringify({
+    sumPrevPages: true,
+    orderBy: [{ t: 'data' }, { t: 'datac' }, { t: 'valor' }],
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 200,
+  });
+
+  const queryParams = new URLSearchParams({
+    apenasMetasDefinidas: 'false',
+    contas,
+    fim: params.endDate,
+    finalidade: '1',
+    inicio: params.startDate,
+    list,
+    moeda: '1',
+    ordenarMesmaData: '4',
+    pendentesPresente: 'true',
+    status: '15',
+    type: 'list',
+  });
+
+  return apiRequest<EntriesResponse>(`/v2/lancamentos?${queryParams.toString()}`);
 }
 
 function mapCategoryType(tipo: 'd' | 'r' | 't'): 'expense' | 'income' | 'transfer' {
@@ -96,5 +129,28 @@ export function normalizeTags(response: TagsResponse): NormalizedTag[] {
     name: tag.nome,
     color: `#${tag.cor}`,
     active: tag.status,
+  }));
+}
+
+function mapEntryStatus(status: string): 'reconciled' | 'pending' | 'scheduled' {
+  const statusMap: Record<string, 'reconciled' | 'pending' | 'scheduled'> = {
+    conciliado: 'reconciled',
+    pendente: 'pending',
+    agendado: 'scheduled',
+  };
+  return statusMap[status] ?? 'pending';
+}
+
+export function normalizeEntries(response: EntriesResponse): NormalizedEntry[] {
+  return response.list.map((entry) => ({
+    id: entry.id,
+    description: entry.descricao,
+    date: entry.data,
+    value: entry.valor,
+    type: mapCategoryType(entry.tipo ?? 'd'),
+    status: mapEntryStatus(entry.status),
+    accountId: entry.conta,
+    categoryId: entry.categoria ?? null,
+    installment: entry.parcela ?? null,
   }));
 }

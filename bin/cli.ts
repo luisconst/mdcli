@@ -5,6 +5,7 @@ import { authCommand } from '../src/commands/auth.js';
 import { categoriesCommand } from '../src/commands/categories.js';
 import { accountsCommand } from '../src/commands/accounts.js';
 import { tagsCommand } from '../src/commands/tags.js';
+import { entriesCommand } from '../src/commands/entries.js';
 
 const program = new Command();
 
@@ -17,5 +18,6 @@ program.addCommand(authCommand);
 program.addCommand(categoriesCommand);
 program.addCommand(accountsCommand);
 program.addCommand(tagsCommand);
+program.addCommand(entriesCommand);
 
 program.parse();

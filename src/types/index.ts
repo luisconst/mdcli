@@ -197,3 +197,100 @@ export interface MdcliConfig {
   auth?: AuthConfig;
   lastUpdated?: string;
 }
+
+interface EntryPermissions {
+  visivel: boolean;
+  acoes: {
+    conciliar: boolean;
+    confirmar: boolean;
+    editar: boolean;
+    excluir: boolean;
+    clonar: boolean;
+  };
+}
+
+interface EntryDetail {
+  id: string;
+  descricao: string;
+  valor: number;
+  tipo: 'd' | 'r' | 't';
+  estorno: boolean;
+  categoria: number;
+}
+
+interface EntryAgenda {
+  frequencia: number;
+  intervalo: string;
+  quantidade: number;
+  primeiraData: string;
+}
+
+export interface Entry {
+  id: number | string;
+  descricao: string;
+  conciliado?: boolean;
+  dataCompetencia?: string;
+  parcela?: string;
+  status: 'conciliado' | 'pendente' | 'agendado';
+  tipo?: 'd' | 'r' | 't';
+  valor: number;
+  valorPrevisto?: number;
+  valorEfetivo?: number;
+  data: string;
+  dataPrevista: string;
+  dataEfetiva?: string;
+  dataCriacao?: string;
+  exibirCp?: boolean;
+  exibirCr?: boolean;
+  permissoes?: EntryPermissions;
+  estorno?: boolean;
+  conta: number;
+  categoria?: number;
+  categoriaPai?: number;
+  observacoes?: string;
+  ndocumento?: string;
+  lembrete?: number;
+  automatico?: boolean;
+  regime?: string;
+  dataReconhecimento?: string;
+  detalhes?: EntryDetail[];
+  tags?: number[];
+  agendaId?: number;
+  agenda?: EntryAgenda;
+  valorT?: number;
+  valorPrevistoT?: number;
+  contaT?: number;
+  transferencia?: number;
+  metaEconomiaDestino?: number;
+  projecaoFatura?: number;
+}
+
+export interface EntriesResponse {
+  list: Entry[];
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+  };
+}
+
+export interface EntriesParams {
+  accountIds: number[];
+  startDate: string;
+  endDate: string;
+  includeFaturas?: boolean;
+  pageSize?: number;
+  page?: number;
+}
+
+export interface NormalizedEntry {
+  id: number | string;
+  description: string;
+  date: string;
+  value: number;
+  type: 'expense' | 'income' | 'transfer';
+  status: 'reconciled' | 'pending' | 'scheduled';
+  accountId: number;
+  categoryId: number | null;
+  installment: string | null;
+}

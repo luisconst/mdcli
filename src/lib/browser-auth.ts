@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import type { AuthConfig } from '../types/index.js';
 
 const LOGIN_URL = 'https://app.meudinheiroweb.com.br/';
-const API_URL_PATTERN = 'app.meudinheiroweb.com.br/api/v1/';
+const API_URL_PATTERN = 'app.meudinheiroweb.com.br/api/';
 
 const REQUIRED_HEADERS = ['authorization', 'mdapikey', 'mdpolicy', 'mdsignature', 'mduid'] as const;
 
