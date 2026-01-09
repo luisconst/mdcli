@@ -1,8 +1,16 @@
 import { Command } from 'commander';
 import { input, password } from '@inquirer/prompts';
 import { logger } from '../utils/logger.js';
-import { getAuth, setAuth, hasAuth, getConfigPath, getFullConfig } from '../lib/config.js';
-import { captureAuthFromBrowser } from '../lib/browser-auth.js';
+import {
+  getAuth,
+  setAuth,
+  hasAuth,
+  getConfigPath,
+  getFullConfig,
+  getOpItem,
+  setOpItem,
+} from '../lib/config.js';
+import { captureAuthFromBrowser, captureAuthHeadless } from '../lib/browser-auth.js';
 import type { AuthConfig } from '../types/index.js';
 
 async function promptManualAuth(): Promise<AuthConfig> {
@@ -33,15 +41,47 @@ async function promptManualAuth(): Promise<AuthConfig> {
   return { token, apiKey, policy, signature, uid };
 }
 
-async function loginAction(options: { manual?: boolean }): Promise<void> {
+async function resolveOpItemName(providedItem?: string): Promise<string> {
+  if (providedItem) {
+    return providedItem;
+  }
+
+  const savedItem = getOpItem();
+  if (savedItem) {
+    return savedItem;
+  }
+
+  return input({
+    message: '1Password item name for Meu Dinheiro credentials:',
+    default: 'MeuDinheiroWeb',
+  });
+}
+
+async function loginAction(options: {
+  manual?: boolean;
+  browser?: boolean;
+  item?: string;
+}): Promise<void> {
   try {
     let auth: AuthConfig;
 
     if (options.manual) {
       auth = await promptManualAuth();
-    } else {
+    } else if (options.browser) {
       logger.info('Starting browser authentication...');
       auth = await captureAuthFromBrowser();
+    } else {
+      const itemName = await resolveOpItemName(options.item);
+      const isNewItem = getOpItem() !== itemName;
+
+      logger.info(`Starting automatic authentication via 1Password (${itemName})...`);
+      auth = await captureAuthHeadless(itemName);
+
+      if (isNewItem) {
+        setOpItem(itemName);
+        logger.info(`1Password item "${itemName}" saved to config.`);
+        logger.info('To change it, run: mdcli auth login --item <new-name>');
+      }
     }
 
     setAuth(auth);
@@ -58,12 +98,14 @@ function statusAction(): void {
   const configPath = getConfigPath();
   const config = getFullConfig();
   const auth = getAuth();
+  const opItem = getOpItem();
 
   logger.header('Authentication Status');
 
   logger.kv('Config file', configPath);
   logger.kv('Last updated', config.lastUpdated ?? null);
   logger.kv('Authenticated', hasAuth() ? 'Yes' : 'No');
+  logger.kv('1Password item', opItem ?? '(not configured)');
 
   if (auth) {
     logger.blank();
@@ -80,8 +122,10 @@ export const authCommand = new Command('auth')
 
 authCommand
   .command('login')
-  .description('Authenticate with Meu Dinheiro')
+  .description('Authenticate with Meu Dinheiro (uses 1Password by default)')
   .option('-m, --manual', 'Manually enter authentication headers')
+  .option('-b, --browser', 'Open browser for manual login')
+  .option('-i, --item <name>', '1Password item name (saved to config)')
   .action(loginAction);
 
 authCommand

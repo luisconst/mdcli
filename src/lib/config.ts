@@ -61,3 +61,14 @@ export function setAliases(aliases: AliasMap): void {
   config.aliases = aliases;
   saveConfig(config);
 }
+
+export function getOpItem(): string | null {
+  const config = loadConfig();
+  return config.opItem ?? null;
+}
+
+export function setOpItem(itemName: string): void {
+  const config = loadConfig();
+  config.opItem = itemName;
+  saveConfig(config);
+}

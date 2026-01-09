@@ -210,6 +210,7 @@ export interface MdcliConfig {
   auth?: AuthConfig;
   lastUpdated?: string;
   aliases?: AliasMap;
+  opItem?: string;
 }
 
 interface EntryPermissions {

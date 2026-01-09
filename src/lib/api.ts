@@ -13,9 +13,12 @@ import type {
   CreateEntryPayload,
   CreateEntryResponse,
 } from '../types/index.js';
-import { getAuth } from './config.js';
+import { getAuth, setAuth, getOpItem } from './config.js';
+import { captureAuthHeadless } from './browser-auth.js';
 
 const BASE_URL = 'https://app.meudinheiroweb.com.br/api';
+
+let isRefreshing = false;
 
 function buildHeaders(auth: AuthConfig): ApiHeaders {
   return {
@@ -26,6 +29,38 @@ function buildHeaders(auth: AuthConfig): ApiHeaders {
     Mdsignature: auth.signature,
     Mduid: auth.uid,
   };
+}
+
+async function refreshAuthAndRetry<T>(
+  requestFn: (auth: AuthConfig) => Promise<Response>
+): Promise<T> {
+  if (isRefreshing) {
+    throw new Error('Authentication refresh already in progress');
+  }
+
+  const opItem = getOpItem();
+  if (!opItem) {
+    throw new Error(
+      'Authentication expired. No 1Password item configured for auto-refresh.\n' +
+        'Run "mdcli auth login --item <name>" to configure automatic login.'
+    );
+  }
+
+  isRefreshing = true;
+  try {
+    console.log('🔄 Token expired, refreshing via 1Password...');
+    const newAuth = await captureAuthHeadless(opItem);
+    setAuth(newAuth);
+    console.log('✓ Token refreshed successfully');
+
+    const response = await requestFn(newAuth);
+    if (!response.ok) {
+      throw new Error(`API request failed after refresh: ${response.status} ${response.statusText}`);
+    }
+    return response.json() as Promise<T>;
+  } finally {
+    isRefreshing = false;
+  }
 }
 
 async function apiRequest<T>(endpoint: string): Promise<T> {
@@ -44,12 +79,27 @@ async function apiRequest<T>(endpoint: string): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication expired. Run "mdcli auth login" to re-authenticate.');
+      return refreshAuthAndRetry<T>((newAuth) =>
+        fetch(url, {
+          method: 'GET',
+          headers: buildHeaders(newAuth) as unknown as Record<string, string>,
+        })
+      );
     }
     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
 
   return response.json() as Promise<T>;
+}
+
+function buildPostHeaders(auth: AuthConfig): Record<string, string> {
+  return {
+    ...(buildHeaders(auth) as unknown as Record<string, string>),
+    'Content-Type': 'application/json;charset=UTF-8',
+    'Accept': 'application/json, text/plain, */*',
+    'Origin': 'https://app.meudinheiroweb.com.br',
+    'Referer': 'https://app.meudinheiroweb.com.br/',
+  };
 }
 
 async function apiPost<T, R>(endpoint: string, body: T): Promise<R> {
@@ -58,24 +108,23 @@ async function apiPost<T, R>(endpoint: string, body: T): Promise<R> {
     throw new Error('Not authenticated. Run "mdcli auth login" first.');
   }
 
-  const headers = buildHeaders(auth);
   const url = `${BASE_URL}${endpoint}`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      ...(headers as unknown as Record<string, string>),
-      'Content-Type': 'application/json;charset=UTF-8',
-      'Accept': 'application/json, text/plain, */*',
-      'Origin': 'https://app.meudinheiroweb.com.br',
-      'Referer': 'https://app.meudinheiroweb.com.br/',
-    },
+    headers: buildPostHeaders(auth),
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error('Authentication expired. Run "mdcli auth login" to re-authenticate.');
+      return refreshAuthAndRetry<R>((newAuth) =>
+        fetch(url, {
+          method: 'POST',
+          headers: buildPostHeaders(newAuth),
+          body: JSON.stringify(body),
+        })
+      );
     }
     const errorText = await response.text();
     throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);

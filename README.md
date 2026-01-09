@@ -21,11 +21,34 @@ bun install
 bun dev --help
 ```
 
+### Optional: 1Password CLI
+
+For automatic login with automatic token refresh, install the [1Password CLI](https://developer.1password.com/docs/cli/get-started/):
+
+```bash
+# macOS
+brew install 1password-cli
+
+# Linux
+# See https://developer.1password.com/docs/cli/get-started/#install
+```
+
+Create a 1Password item with the following fields:
+- `username` - your login email
+- `password` - your password
+- `otp` - one-time password (configured as TOTP)
+
 ## Usage
 
 ```bash
-# Authenticate (opens browser to capture session)
+# Authenticate using 1Password (default, prompts for item name on first run)
 mdcli auth login
+
+# Specify 1Password item name (saved to config for future use)
+mdcli auth login --item "My Meu Dinheiro"
+
+# Or open browser for manual login
+mdcli auth login --browser
 
 # List accounts
 mdcli accounts list --active
@@ -46,6 +69,8 @@ mdcli entries create --account mp --description "Groceries" --value 150 --catego
 | Feature | Status |
 |---------|--------|
 | Browser login (auto-capture) | Done |
+| Automatic login (1Password CLI) | Done |
+| Auto token refresh on 401 | Done |
 | Manual token entry | Done |
 | Status check | Done |
 | Logout | Missing |
