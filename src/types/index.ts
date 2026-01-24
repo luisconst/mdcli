@@ -321,9 +321,13 @@ export interface CardInvoiceEntry {
 }
 
 export interface CardInvoiceResponse {
-  list: CardInvoiceEntry[];
-  meta?: {
-    total?: number;
+  lancamentos: CardInvoiceEntry[];
+  vencimento: string;
+  fechamento: string;
+  valor: number;
+  resumo?: {
+    totalFatura?: number;
+    totalPagar?: number;
   };
 }
 
@@ -338,10 +342,8 @@ export interface CardFutureInstallment {
 }
 
 export interface CardFutureResponse {
-  list: CardFutureInstallment[];
-  meta?: {
-    total?: number;
-  };
+  parcelas: CardFutureInstallment[];
+  total?: number;
 }
 
 export interface NormalizedEntry {

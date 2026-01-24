@@ -202,7 +202,7 @@ export async function fetchCardInvoice(cardId: number, dueDate: string): Promise
 }
 
 export async function fetchCardFuture(cardId: number): Promise<CardFutureResponse> {
-  return apiRequest<CardFutureResponse>(`/v1/cartoes/${cardId}/parcelasFuturas?id=${cardId}&totalizar=true`);
+  return apiRequest<CardFutureResponse>(`/v1/cartoes/${cardId}/parcelasFuturas?id=${cardId}`);
 }
 
 export async function fetchEntry(id: number): Promise<Entry> {
@@ -320,7 +320,7 @@ export function normalizeEntries(response: EntriesResponse): NormalizedEntry[] {
 }
 
 export function normalizeCardEntries(response: CardInvoiceResponse): NormalizedCardEntry[] {
-  return response.list.map((entry) => ({
+  return response.lancamentos.map((entry) => ({
     id: entry.id,
     description: entry.descricao,
     date: entry.data,
@@ -331,7 +331,10 @@ export function normalizeCardEntries(response: CardInvoiceResponse): NormalizedC
 }
 
 export function normalizeCardInstallments(response: CardFutureResponse): NormalizedCardInstallment[] {
-  return response.list.map((item) => ({
+  if (!response.parcelas || !Array.isArray(response.parcelas)) {
+    return [];
+  }
+  return response.parcelas.map((item) => ({
     id: item.id,
     description: item.descricao,
     date: item.data,
@@ -343,8 +346,7 @@ export function normalizeCardInstallments(response: CardFutureResponse): Normali
 }
 
 export function isCreditCard(account: Account): boolean {
-  const CREDIT_CARD_TYPE_ID = 3;
-  return account.tipoNovo === CREDIT_CARD_TYPE_ID;
+  return account.tipo === 'CARTAOCREDITO';
 }
 
 export async function createEntry(payload: CreateEntryPayload): Promise<CreateEntryResponse> {
