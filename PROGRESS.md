@@ -221,3 +221,14 @@
 **Phase 6 Documentation is COMPLETE.**
 
 **Remaining**: Tasks 6.1-6.5 require manual testing by user (browser interaction)
+
+### Task 3.2 Update: Handle Redirect Scenario [DONE]
+
+- Modified `extractSessionFromBrowser()` in `src/lib/browser-session.ts`:
+  - Added `page.addInitScript()` with a setter trap on `window.loginconfig`
+  - The trap captures `loginconfig` to `__captured_loginconfig` before the redirect occurs
+  - On evaluate, checks `__captured_loginconfig` first, then falls back to `loginconfig`
+- This prevents losing authentication data when logged-in users are redirected from `/` to dashboard
+- Verification: `bun run typecheck` passes, `bun run lint` passes, `bun run knip` passes
+
+**Remaining**: Tasks 3.3 Update, 3.4 Update (from Appendix), and Tasks 6.1-6.5 require manual testing

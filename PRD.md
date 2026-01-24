@@ -605,7 +605,7 @@ window.loginconfig = {
 
 ### Task Updates Required
 
-#### Task 3.2 Update: Handle Redirect Scenario
+#### Task 3.2 Update: Handle Redirect Scenario [DONE]
 
 **Problem**: If user has active session, navigating to `/` redirects to dashboard before `loginconfig` can be extracted.
 

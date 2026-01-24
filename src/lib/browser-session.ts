@@ -187,13 +187,25 @@ export async function extractSessionFromBrowser(
     try {
       const page = context.pages()[0] ?? (await context.newPage());
 
-      // Task 3.2: Navigate and extract window.loginconfig
+      // Capture loginconfig via setter trap - prevents losing it if page redirects to dashboard
+      await page.addInitScript(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const browserWindow = globalThis as any;
+        Object.defineProperty(browserWindow, 'loginconfig', {
+          set(value: unknown) {
+            browserWindow.__captured_loginconfig = value;
+            Object.defineProperty(browserWindow, 'loginconfig', { value, writable: true });
+          },
+          configurable: true,
+        });
+      });
+
       await page.goto('https://app.meudinheiroweb.com.br/', { waitUntil: 'domcontentloaded' });
 
       const loginConfig = await page.evaluate((): LoginConfigRaw | null => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const browserWindow = globalThis as any;
-        const config = browserWindow.loginconfig;
+        const config = browserWindow.__captured_loginconfig || browserWindow.loginconfig;
         if (!config) return null;
         return {
           mdApiKey: config.mdApiKey,
