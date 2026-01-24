@@ -38,4 +38,13 @@
 - Verification: `bun run typecheck` passes, `bun run lint` passes
 - Note: `bun run knip` still flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
 
-**Next task**: Task 2.3 - Implement profile copy to temp directory
+### Task 2.3: Implement profile copy to temp directory [DONE]
+
+- Added `copyProfileToTemp()` function to `src/lib/browser-session.ts`:
+  - Uses `mkdtemp` from `node:fs/promises` to create temp directory with prefix `mdcli-profile-`
+  - Uses `cp` from `node:fs/promises` to recursively copy browser profile
+  - Returns the temp directory path for Playwright to use
+- Verification: `bun run typecheck` passes, `bun run lint` passes
+- Note: `bun run knip` still flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
+
+**Next task**: Task 2.4 - Implement temp directory cleanup

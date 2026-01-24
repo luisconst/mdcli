@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { cp, mkdtemp } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import type { AuthConfig } from '../types/index.js';
 
 export interface BrowserSessionOptions {
@@ -135,6 +136,12 @@ export function getFirefoxProfilePath(): string {
   }
 
   return profilePath;
+}
+
+export async function copyProfileToTemp(profilePath: string): Promise<string> {
+  const tempDir = await mkdtemp(join(tmpdir(), 'mdcli-profile-'));
+  await cp(profilePath, tempDir, { recursive: true });
+  return tempDir;
 }
 
 export async function extractSessionFromBrowser(

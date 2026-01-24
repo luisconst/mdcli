@@ -271,7 +271,7 @@ Try: mdcli auth login --browser
 - **Verification**: Returns correct path for current platform
 - **Completed**: 2026-01-24 - getFirefoxProfilePath() added with profiles.ini parsing and default profile detection
 
-#### Task 2.3: Implement profile copy to temp directory
+#### Task 2.3: Implement profile copy to temp directory [DONE]
 - **File**: `src/lib/browser-session.ts`
 - **Action**: Add `copyProfileToTemp()` function
 - **Logic**:
@@ -283,6 +283,7 @@ Try: mdcli auth login --browser
   }
   ```
 - **Verification**: Creates temp directory with profile contents
+- **Completed**: 2026-01-24 - `copyProfileToTemp()` function added using `mkdtemp` and `cp` from `node:fs/promises`
 
 #### Task 2.4: Implement temp directory cleanup
 - **File**: `src/lib/browser-session.ts`
