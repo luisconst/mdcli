@@ -142,4 +142,22 @@
   - Explicit `--item` flag still directly uses 1Password without trying browser first
 - Verification: `bun run typecheck` passes, `bun run lint` passes, `bun run knip` passes
 
-**Next task**: Task 4.4 - Add fallback flow when session extraction fails
+### Task 4.4: Add fallback flow when session extraction fails [DONE]
+
+- Modified `loginAction` in `src/commands/auth.ts` to provide an interactive fallback when Chrome session extraction fails:
+  - Added `select` import from `@inquirer/prompts`
+  - When session extraction fails, displays the error with `logger.warning()`
+  - Shows interactive prompt with 5 options:
+    1. 1Password (automatic login)
+    2. Try Firefox session instead
+    3. Open browser for manual login
+    4. Enter credentials manually
+    5. Cancel
+  - User can select their preferred authentication method instead of automatic 1Password fallback
+  - Each fallback option triggers the appropriate existing authentication flow
+  - "Cancel" option gracefully exits without error
+- Verification: `bun run typecheck` passes, `bun run lint` passes, `bun run knip` passes
+
+**Phase 4 (CLI Integration) is now COMPLETE.**
+
+**Next task**: Task 5.1 - Add Chrome not found error

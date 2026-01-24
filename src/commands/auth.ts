@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { input, password } from '@inquirer/prompts';
+import { input, password, select } from '@inquirer/prompts';
 import { logger } from '../utils/logger.js';
 import {
   getAuth,
@@ -107,18 +107,44 @@ async function loginAction(options: {
       } catch (sessionError) {
         const sessionMessage = sessionError instanceof Error ? sessionError.message : 'Unknown error';
         logger.warning(`Browser session extraction failed: ${sessionMessage}`);
-        logger.info('Falling back to 1Password authentication...');
+        logger.blank();
 
-        const itemName = await resolveOpItemName(undefined);
-        const isNewItem = getOpItem() !== itemName;
+        const fallbackChoice = await select({
+          message: 'How would you like to authenticate?',
+          choices: [
+            { value: '1password', name: '1Password (automatic login)' },
+            { value: 'firefox', name: 'Try Firefox session instead' },
+            { value: 'browser', name: 'Open browser for manual login' },
+            { value: 'manual', name: 'Enter credentials manually' },
+            { value: 'abort', name: 'Cancel' },
+          ],
+        });
 
-        logger.info(`Starting automatic authentication via 1Password (${itemName})...`);
-        auth = await captureAuthHeadless(itemName);
+        if (fallbackChoice === 'abort') {
+          logger.info('Authentication cancelled.');
+          return;
+        }
 
-        if (isNewItem) {
-          setOpItem(itemName);
-          logger.info(`1Password item "${itemName}" saved to config.`);
-          logger.info('To change it, run: mdcli auth login --item <new-name>');
+        if (fallbackChoice === '1password') {
+          const itemName = await resolveOpItemName(undefined);
+          const isNewItem = getOpItem() !== itemName;
+
+          logger.info(`Starting automatic authentication via 1Password (${itemName})...`);
+          auth = await captureAuthHeadless(itemName);
+
+          if (isNewItem) {
+            setOpItem(itemName);
+            logger.info(`1Password item "${itemName}" saved to config.`);
+            logger.info('To change it, run: mdcli auth login --item <new-name>');
+          }
+        } else if (fallbackChoice === 'firefox') {
+          logger.info('Extracting session from Firefox...');
+          auth = await extractSessionFromBrowser({ browser: 'firefox' });
+        } else if (fallbackChoice === 'browser') {
+          logger.info('Starting browser authentication...');
+          auth = await captureAuthFromBrowser();
+        } else {
+          auth = await promptManualAuth();
         }
       }
     }

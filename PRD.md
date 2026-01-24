@@ -408,11 +408,14 @@ Try: mdcli auth login --browser
 - **Verification**: `mdcli auth login` attempts browser session first
 - **Completed**: 2026-01-24 - Default flow now tries Chrome session first, falls back to 1Password on failure
 
-#### Task 4.4: Add fallback flow when session extraction fails
+#### Task 4.4: Add fallback flow when session extraction fails [DONE]
 - **File**: `src/commands/auth.ts`
 - **Action**: Prompt user for alternative method on failure
 - **Logic**: Show error, suggest `--browser` or `--item`
 - **Verification**: Clear guidance when extraction fails
+- **Completed**: 2026-01-24 - Added interactive fallback with select prompt offering: 1Password, Firefox session, browser login, manual entry, or cancel
+
+**Phase 4 (CLI Integration) is now COMPLETE.**
 
 ---
 
