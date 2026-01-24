@@ -226,7 +226,7 @@ Try: mdcli auth login --browser
 - **Verification**: `bun run typecheck` passes
 - **Completed**: 2026-01-24 - playwright@1.58.0 added, typecheck passes
 
-#### Task 1.2: Create browser-session.ts scaffold
+#### Task 1.2: Create browser-session.ts scaffold [DONE]
 - **File**: `src/lib/browser-session.ts` (new)
 - **Action**: Create file with type definitions and exports
 - **Content**:
@@ -244,6 +244,7 @@ Try: mdcli auth login --browser
   }
   ```
 - **Verification**: File compiles without errors
+- **Completed**: 2026-01-24 - File created, typecheck passes
 
 ---
 
