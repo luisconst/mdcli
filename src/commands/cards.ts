@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import Table from 'cli-table3';
 import chalk from 'chalk';
 import { logger } from '../utils/logger.js';
-import { fetchAccounts, normalizeAccounts, isCreditCard, fetchCardInvoice, normalizeCardEntries, fetchFirstInvoiceDate } from '../lib/api.js';
+import { fetchAccounts, normalizeAccounts, isCreditCard, fetchCardInvoice, normalizeCardEntries, fetchFirstInvoiceDate, fetchCardFuture, normalizeCardInstallments } from '../lib/api.js';
 import { resolveId } from '../lib/aliases.js';
 
 function formatCurrency(value: number): string {
@@ -145,3 +145,65 @@ cardsCommand
   .option('--month <YYYY-MM>', 'Invoice month (default: current/next invoice)')
   .option('--json', 'Output as JSON')
   .action(invoiceAction);
+
+async function futureAction(options: { account: string; json?: boolean }): Promise<void> {
+  try {
+    const accountId = resolveId('accounts', options.account);
+    if (!accountId) {
+      logger.error(`Unknown account: ${options.account}`);
+      process.exit(1);
+    }
+
+    const response = await fetchAccounts();
+    const account = response.items.find(a => a.id === accountId);
+    
+    if (!account) {
+      logger.error(`Account not found: ${accountId}`);
+      process.exit(1);
+    }
+
+    if (!isCreditCard(account)) {
+      logger.error(`Account ${accountId} is not a credit card`);
+      process.exit(1);
+    }
+
+    const futureResponse = await fetchCardFuture(accountId);
+    const installments = normalizeCardInstallments(futureResponse);
+
+    if (options.json) {
+      console.log(JSON.stringify(installments, null, 2));
+      return;
+    }
+
+    const table = new Table({
+      head: ['Date', 'Description', 'Value', 'Installment', 'Remaining'],
+      style: { head: ['cyan'] },
+      colWidths: [12, 32, 15, 15, 12],
+    });
+
+    for (const item of installments) {
+      table.push([
+        item.date,
+        item.description.length > 29 ? `${item.description.slice(0, 29)}...` : item.description,
+        formatCurrency(item.value),
+        item.installment,
+        item.remaining.toString(),
+      ]);
+    }
+
+    const total = installments.reduce((sum, i) => sum + i.value, 0);
+    logger.header(`Future Installments for ${account.nome} (${installments.length} items) | Total: ${formatCurrency(total)}`);
+    console.log(table.toString());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(message);
+    process.exit(1);
+  }
+}
+
+cardsCommand
+  .command('future')
+  .description('Show future installments for credit card')
+  .requiredOption('-a, --account <id>', 'Card ID or alias')
+  .option('--json', 'Output as JSON')
+  .action(futureAction);
