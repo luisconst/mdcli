@@ -99,4 +99,18 @@
 - Verification: `bun run typecheck` passes, `bun run lint` passes
 - Note: `bun run knip` still flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
 
-**Next task**: Task 3.5 - Convert to AuthConfig format
+### Task 3.5: Convert to AuthConfig format [DONE]
+
+- Replaced placeholder error with actual `AuthConfig` return statement in `extractSessionFromBrowser()`:
+  - Returns `token` from `mdauthtoken0` cookie
+  - Returns `apiKey` from `loginConfig.mdApiKey`
+  - Returns `policy` from `loginConfig.mdPolicy` (URL-decoded via `decodeURIComponent`)
+  - Returns `signature` from `loginConfig.mdSignature` (URL-decoded via `decodeURIComponent`)
+  - Returns `uid` from `loginConfig.uid` (converted to string)
+- Added validation for required fields (`mdApiKey`, `mdPolicy`, `mdSignature`) with descriptive error message
+- Verification: `bun run typecheck` passes, `bun run lint` passes
+- Note: `bun run knip` still flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
+
+**Phase 3 (Config Extraction) is now COMPLETE.**
+
+**Next task**: Task 4.1 - Add --session option to auth login

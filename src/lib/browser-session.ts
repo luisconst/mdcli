@@ -200,9 +200,19 @@ export async function extractSessionFromBrowser(
         throw new Error('User is not logged into MeuDinheiro. Try: mdcli auth login --browser');
       }
 
-      throw new Error(
-        `Not fully implemented: extraction logic pending (Task 3.5). Config extracted: ${JSON.stringify(loginConfig)}, Token: ${token ? 'present' : 'missing'}`
-      );
+      if (!loginConfig.mdApiKey || !loginConfig.mdPolicy || !loginConfig.mdSignature) {
+        throw new Error(
+          'Failed to extract authentication config from page. The site structure may have changed.\nTry: mdcli auth login --browser'
+        );
+      }
+
+      return {
+        token,
+        apiKey: loginConfig.mdApiKey,
+        policy: decodeURIComponent(loginConfig.mdPolicy),
+        signature: decodeURIComponent(loginConfig.mdSignature),
+        uid: String(loginConfig.uid),
+      };
     } finally {
       await context.close();
     }

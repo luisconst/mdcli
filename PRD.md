@@ -354,7 +354,7 @@ Try: mdcli auth login --browser
 - **Verification**: Clear error message for unauthenticated users
 - **Completed**: 2026-01-24 - Added check for missing loginConfig or null/undefined uid with descriptive error message
 
-#### Task 3.5: Convert to AuthConfig format
+#### Task 3.5: Convert to AuthConfig format [DONE]
 - **File**: `src/lib/browser-session.ts`
 - **Action**: Transform extracted data to `AuthConfig`
 - **Logic**:
@@ -368,6 +368,7 @@ Try: mdcli auth login --browser
   };
   ```
 - **Verification**: Returns valid `AuthConfig` object
+- **Completed**: 2026-01-24 - Added validation for required fields (mdApiKey, mdPolicy, mdSignature) and return statement with URL decoding
 
 ---
 
