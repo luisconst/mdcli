@@ -16,4 +16,14 @@
 - Verification: `bun run typecheck` passes, `bun run lint` passes
 - Note: `bun run knip` flags `browser-session.ts` and `playwright` as unused - this is expected until Task 4.2 integrates the module into auth.ts
 
-**Next task**: Task 2.1 - Implement Chrome profile path detection
+### Task 2.1: Implement Chrome profile path detection [DONE]
+
+- Added `getChromeProfilePath()` function to `src/lib/browser-session.ts`:
+  - Platform-specific paths for macOS, Windows, and Linux
+  - Validates path exists with `existsSync()`
+  - Throws descriptive error if Chrome not found (suggests `--session firefox` or `--browser`)
+  - Throws error for unsupported platforms
+- Verification: `bun run typecheck` passes, `bun run lint` passes
+- Note: `bun run knip` still flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
+
+**Next task**: Task 2.2 - Implement Firefox profile path detection

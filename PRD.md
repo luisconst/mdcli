@@ -250,7 +250,7 @@ Try: mdcli auth login --browser
 
 ### Phase 2: Profile Management
 
-#### Task 2.1: Implement Chrome profile path detection
+#### Task 2.1: Implement Chrome profile path detection [DONE]
 - **File**: `src/lib/browser-session.ts`
 - **Action**: Add `getChromeProfilePath()` function
 - **Logic**:
@@ -262,6 +262,7 @@ Try: mdcli auth login --browser
   };
   ```
 - **Verification**: Returns correct path for current platform
+- **Completed**: 2026-01-24 - getChromeProfilePath() added with platform detection and existence check
 
 #### Task 2.2: Implement Firefox profile path detection
 - **File**: `src/lib/browser-session.ts`
