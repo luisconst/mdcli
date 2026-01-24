@@ -231,4 +231,19 @@
 - This prevents losing authentication data when logged-in users are redirected from `/` to dashboard
 - Verification: `bun run typecheck` passes, `bun run lint` passes, `bun run knip` passes
 
-**Remaining**: Tasks 3.3 Update, 3.4 Update (from Appendix), and Tasks 6.1-6.5 require manual testing
+### Task 3.3 Update: Handle MFA Page Structure [DONE]
+
+- Added `mdauthtoken` field to `LoginConfigRaw` interface
+- Added `extractUidFromJwt()` function to extract uid from JWT's `uids` claim
+- Updated extraction logic to fall back to JWT when `loginConfig.uid` is null/undefined
+- This handles the MFA page scenario where `loginconfig` has `mdauthtoken` but no `uid` field
+- Verification: `bun run typecheck` passes, `bun run lint` passes, `bun run knip` passes
+
+### Task 3.4 Update: Token Source Priority [DONE]
+
+- Updated token extraction to use priority order: `loginConfig.mdauthtoken` > `mdauthtoken0` cookie
+- Updated `page.evaluate()` to include `mdauthtoken` from loginconfig
+- Uses nullish coalescing (`??`) to provide clean fallback logic
+- Verification: `bun run typecheck` passes, `bun run lint` passes, `bun run knip` passes
+
+**Remaining**: Tasks 6.1-6.5 require manual testing by user (browser interaction)

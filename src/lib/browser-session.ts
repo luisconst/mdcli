@@ -9,7 +9,24 @@ interface LoginConfigRaw {
   mdApiKey?: string;
   mdPolicy?: string;
   mdSignature?: string;
+  mdauthtoken?: string;
   uid?: number | null;
+}
+
+/**
+ * Extract user ID from JWT's `uids` claim.
+ * Used when loginconfig.uid is not available (e.g., on MFA page).
+ */
+function extractUidFromJwt(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+    return payload.uids ? String(payload.uids) : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface BrowserSessionOptions {
@@ -211,15 +228,17 @@ export async function extractSessionFromBrowser(
           mdApiKey: config.mdApiKey,
           mdPolicy: config.mdPolicy,
           mdSignature: config.mdSignature,
+          mdauthtoken: config.mdauthtoken,
           uid: config.uid,
         };
       });
 
       const cookies = await context.cookies();
       const authCookie = cookies.find((c) => c.name === 'mdauthtoken0');
-      const token = authCookie?.value ?? '';
 
-      if (!loginConfig || loginConfig.uid === null || loginConfig.uid === undefined) {
+      const token = loginConfig?.mdauthtoken ?? authCookie?.value ?? '';
+
+      if (!loginConfig) {
         throw new Error('User is not logged into MeuDinheiro. Try: mdcli auth login --browser');
       }
 
@@ -229,12 +248,18 @@ export async function extractSessionFromBrowser(
         );
       }
 
+      const uid = loginConfig.uid != null ? String(loginConfig.uid) : extractUidFromJwt(token);
+
+      if (!uid) {
+        throw new Error('User is not logged into MeuDinheiro. Try: mdcli auth login --browser');
+      }
+
       return {
         token,
         apiKey: loginConfig.mdApiKey,
         policy: decodeURIComponent(loginConfig.mdPolicy),
         signature: decodeURIComponent(loginConfig.mdSignature),
-        uid: String(loginConfig.uid),
+        uid,
       };
     } finally {
       await context.close();

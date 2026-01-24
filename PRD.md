@@ -629,7 +629,7 @@ await page.goto('https://app.meudinheiroweb.com.br/');
 const loginConfig = await page.evaluate(() => (window as any).__captured_loginconfig || (window as any).loginconfig);
 ```
 
-#### Task 3.3 Update: Handle MFA Page Structure
+#### Task 3.3 Update: Handle MFA Page Structure [DONE]
 
 **Problem**: MFA page `loginconfig` has `mdauthtoken` but no `uid` field.
 
@@ -645,7 +645,9 @@ function extractUidFromJwt(token: string): string {
 const uid = loginConfig.uid ?? extractUidFromJwt(loginConfig.mdauthtoken || token);
 ```
 
-#### Task 3.4 Update: Token Source Priority
+**Completed**: 2026-01-24 - Added `extractUidFromJwt()` function and updated extraction logic to fall back to JWT when uid is not in loginconfig.
+
+#### Task 3.4 Update: Token Source Priority [DONE]
 
 **Problem**: JWT token available in multiple places depending on auth state.
 
@@ -657,6 +659,8 @@ const uid = loginConfig.uid ?? extractUidFromJwt(loginConfig.mdauthtoken || toke
 // 2. mdauthtoken0 cookie (available after full auth)
 const token = loginConfig?.mdauthtoken || cookies.find(c => c.name === 'mdauthtoken0')?.value;
 ```
+
+**Completed**: 2026-01-24 - Updated LoginConfigRaw interface to include `mdauthtoken` and implemented token priority order with nullish coalescing.
 
 ---
 
