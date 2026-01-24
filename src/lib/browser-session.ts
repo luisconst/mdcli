@@ -5,6 +5,13 @@ import { homedir, tmpdir } from 'node:os';
 import { chromium, firefox } from 'playwright';
 import type { AuthConfig } from '../types/index.js';
 
+interface LoginConfigRaw {
+  mdApiKey?: string;
+  mdPolicy?: string;
+  mdSignature?: string;
+  uid?: number | null;
+}
+
 export interface BrowserSessionOptions {
   browser: 'chrome' | 'firefox';
   timeout?: number;
@@ -166,10 +173,35 @@ export async function extractSessionFromBrowser(
       channel: browserType === 'chrome' ? 'chrome' : undefined,
     });
 
-    // TODO: Tasks 3.2-3.5 - Navigate, extract loginconfig, cookies, and return AuthConfig
-    await context.close();
+    try {
+      const page = context.pages()[0] ?? (await context.newPage());
 
-    throw new Error('Not fully implemented: extraction logic pending (Tasks 3.2-3.5)');
+      // Task 3.2: Navigate and extract window.loginconfig
+      await page.goto('https://app.meudinheiroweb.com.br/', { waitUntil: 'domcontentloaded' });
+
+      const loginConfig = await page.evaluate((): LoginConfigRaw | null => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const browserWindow = globalThis as any;
+        const config = browserWindow.loginconfig;
+        if (!config) return null;
+        return {
+          mdApiKey: config.mdApiKey,
+          mdPolicy: config.mdPolicy,
+          mdSignature: config.mdSignature,
+          uid: config.uid,
+        };
+      });
+
+      // TODO: Task 3.3 - Extract JWT token from cookies
+      // TODO: Task 3.4 - Handle user not logged in
+      // TODO: Task 3.5 - Convert to AuthConfig format
+
+      throw new Error(
+        `Not fully implemented: extraction logic pending (Tasks 3.3-3.5). Config extracted: ${JSON.stringify(loginConfig)}`
+      );
+    } finally {
+      await context.close();
+    }
   } finally {
     if (tempDir) {
       await cleanupTempDir(tempDir);

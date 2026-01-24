@@ -309,7 +309,7 @@ Try: mdcli auth login --browser
 - **Verification**: Browser opens with user's session
 - **Completed**: 2026-01-24 - Implemented `extractSessionFromBrowser()` with profile detection, temp copy, Playwright launch, and cleanup
 
-#### Task 3.2: Navigate and extract window.loginconfig
+#### Task 3.2: Navigate and extract window.loginconfig [DONE]
 - **File**: `src/lib/browser-session.ts`
 - **Action**: Use `page.evaluate()` to extract server-injected config
 - **Logic**:
@@ -328,6 +328,7 @@ Try: mdcli auth login --browser
   });
   ```
 - **Verification**: Config extracted immediately after page load
+- **Completed**: 2026-01-24 - Added `LoginConfigRaw` interface, navigation to MeuDinheiro, and `page.evaluate()` extraction of `window.loginconfig`
 
 #### Task 3.3: Extract JWT token from cookies
 - **File**: `src/lib/browser-session.ts`

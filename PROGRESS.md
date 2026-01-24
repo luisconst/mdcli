@@ -69,4 +69,16 @@
 - Verification: `bun run typecheck` passes, `bun run lint` passes
 - Note: `bun run knip` flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
 
-**Next task**: Task 3.2 - Navigate and extract window.loginconfig
+### Task 3.2: Navigate and extract window.loginconfig [DONE]
+
+- Added `LoginConfigRaw` interface to `src/lib/browser-session.ts`:
+  - Defines shape of `window.loginconfig` object (mdApiKey, mdPolicy, mdSignature, uid)
+- Implemented navigation and config extraction in `extractSessionFromBrowser()`:
+  - Gets existing page or creates new page from persistent context
+  - Navigates to `https://app.meudinheiroweb.com.br/` with `waitUntil: 'domcontentloaded'`
+  - Uses `page.evaluate()` with `globalThis` to access browser's `loginconfig` object
+  - Returns extracted config as `LoginConfigRaw | null`
+- Verification: `bun run typecheck` passes, `bun run lint` passes
+- Note: `bun run knip` still flags `browser-session.ts` and `playwright` as unused - expected until Task 4.2
+
+**Next task**: Task 3.3 - Extract JWT token from cookies
