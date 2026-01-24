@@ -2,10 +2,11 @@
 
 import { Command } from 'commander';
 import { authCommand } from '../src/commands/auth.js';
-import { categoriesCommand } from '../src/commands/categories.js';
 import { accountsCommand } from '../src/commands/accounts.js';
+import { categoriesCommand } from '../src/commands/categories.js';
 import { tagsCommand } from '../src/commands/tags.js';
 import { entriesCommand } from '../src/commands/entries.js';
+import { cardsCommand } from '../src/commands/cards.js';
 
 const program = new Command();
 
@@ -19,5 +20,6 @@ program.addCommand(categoriesCommand);
 program.addCommand(accountsCommand);
 program.addCommand(tagsCommand);
 program.addCommand(entriesCommand);
+program.addCommand(cardsCommand);
 
 program.parse();
