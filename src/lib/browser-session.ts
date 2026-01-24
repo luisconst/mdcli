@@ -2,6 +2,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { cp, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
+import { execSync } from 'node:child_process';
+import { createDecipheriv, pbkdf2Sync } from 'node:crypto';
+import { Database } from 'bun:sqlite';
 import { chromium, firefox } from 'playwright';
 import type { AuthConfig } from '../types/index.js';
 
@@ -13,10 +16,62 @@ interface LoginConfigRaw {
   uid?: number | null;
 }
 
-/**
- * Extract user ID from JWT's `uids` claim.
- * Used when loginconfig.uid is not available (e.g., on MFA page).
- */
+function getChromeCookieValue(cookieName: string, domain: string): string | null {
+  if (process.platform !== 'darwin') {
+    return null;
+  }
+
+  try {
+    const chromeDir = join(homedir(), 'Library', 'Application Support', 'Google', 'Chrome');
+    const cookiesPath = join(chromeDir, 'Default', 'Cookies');
+
+    if (!existsSync(cookiesPath)) {
+      return null;
+    }
+
+    const safeStorageKey = execSync('security find-generic-password -s "Chrome Safe Storage" -w', {
+      encoding: 'utf-8',
+    }).trim();
+
+    const derivedKey = pbkdf2Sync(safeStorageKey, 'saltysalt', 1003, 16, 'sha1');
+
+    const db = new Database(cookiesPath, { readonly: true });
+    const row = db.query(
+      'SELECT encrypted_value FROM cookies WHERE name = ? AND host_key = ?'
+    ).get(cookieName, domain) as { encrypted_value: Uint8Array } | null;
+    db.close();
+
+    if (!row?.encrypted_value) {
+      return null;
+    }
+
+    const encryptedValue = Buffer.from(row.encrypted_value);
+
+    if (encryptedValue.slice(0, 3).toString() !== 'v10') {
+      return null;
+    }
+
+    const iv = Buffer.alloc(16, ' ');
+    const decipher = createDecipheriv('aes-128-cbc', derivedKey, iv);
+    const decrypted = Buffer.concat([
+      decipher.update(encryptedValue.slice(3)),
+      decipher.final(),
+    ]);
+
+    const jwtStart = decrypted.indexOf('eyJ');
+    if (jwtStart < 0) {
+      return null;
+    }
+
+    const lastByte = decrypted[decrypted.length - 1];
+    const jwtEnd = lastByte <= 16 ? decrypted.length - lastByte : decrypted.length;
+
+    return decrypted.slice(jwtStart, jwtEnd).toString('utf-8');
+  } catch {
+    return null;
+  }
+}
+
 function extractUidFromJwt(token: string): string | null {
   try {
     const parts = token.split('.');
@@ -163,10 +218,15 @@ function getFirefoxProfilePath(): string {
   return profilePath;
 }
 
-async function copyProfileToTemp(profilePath: string): Promise<string> {
+async function copyProfileToTemp(profilePath: string, excludeLocks = true): Promise<string> {
   const tempDir = await mkdtemp(join(tmpdir(), 'mdcli-profile-'));
   try {
-    await cp(profilePath, tempDir, { recursive: true });
+    await cp(profilePath, tempDir, {
+      recursive: true,
+      filter: excludeLocks
+        ? (src) => !src.endsWith('SingletonLock') && !src.endsWith('SingletonCookie') && !src.endsWith('SingletonSocket')
+        : undefined,
+    });
   } catch (error) {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
 
@@ -233,10 +293,14 @@ export async function extractSessionFromBrowser(
         };
       });
 
-      const cookies = await context.cookies();
+      const cookies = await context.cookies('https://app.meudinheiroweb.com.br/');
       const authCookie = cookies.find((c) => c.name === 'mdauthtoken0');
 
-      const token = loginConfig?.mdauthtoken ?? authCookie?.value ?? '';
+      let token = loginConfig?.mdauthtoken ?? authCookie?.value ?? '';
+
+      if (!token && browserType === 'chrome') {
+        token = getChromeCookieValue('mdauthtoken0', '.meudinheiroweb.com.br') ?? '';
+      }
 
       if (!loginConfig) {
         throw new Error('User is not logged into MeuDinheiro. Try: mdcli auth login --browser');
@@ -248,10 +312,24 @@ export async function extractSessionFromBrowser(
         );
       }
 
-      const uid = loginConfig.uid != null ? String(loginConfig.uid) : extractUidFromJwt(token);
+      let uid = loginConfig.uid != null ? String(loginConfig.uid) : extractUidFromJwt(token);
+
+      // Fallback: read uid from localStorage rememberedUsers
+      if (!uid) {
+        uid = await page.evaluate(() => {
+          try {
+            const rememberedUsers = localStorage.getItem('meudinheiro::rememberedUsers');
+            if (!rememberedUsers) return null;
+            const users = JSON.parse(rememberedUsers);
+            return users[0]?.id ? String(users[0].id) : null;
+          } catch {
+            return null;
+          }
+        });
+      }
 
       if (!uid) {
-        throw new Error('User is not logged into MeuDinheiro. Try: mdcli auth login --browser');
+        throw new Error('Could not determine user ID. Try: mdcli auth login --browser');
       }
 
       return {
