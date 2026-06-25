@@ -4,12 +4,12 @@ Unofficial CLI client for [Meu Dinheiro](https://meudinheiroweb.com.br) - a Braz
 
 ## Installation
 
-### Global (npm/bun)
+> Requires [Bun](https://bun.sh). mdcli runs TypeScript directly and relies on Bun-only APIs, so it does not run under plain Node.js.
+
+### Global
 
 ```bash
 bun install -g github:fm1randa/mdcli
-# or
-npm install -g github:fm1randa/mdcli
 ```
 
 ### From Source
@@ -120,6 +120,21 @@ mdcli entries list --account mp --from 2024-01-01 --to 2024-01-31
 
 # Create an entry
 mdcli entries create --account mp --description "Groceries" --value 150 --category food
+
+# Update an entry (only the fields you pass are changed)
+mdcli entries update 12345 --value 200 --category food
+
+# Delete an entry
+mdcli entries delete 12345
+
+# List credit cards
+mdcli cards list --active
+
+# Show a credit card invoice (defaults to the current/next one)
+mdcli cards invoice --account <cardId> --month 2026-02
+
+# Show upcoming installments on a card
+mdcli cards future --account <cardId>
 ```
 
 ## Features
@@ -188,4 +203,13 @@ mdcli entries create --account mp --description "Groceries" --value 150 --catego
 | Create (single) | Done |
 | Create (recurring) | Done |
 | Update | Done |
-| Delete | Missing |
+| Delete | Done |
+
+### Cards
+| Feature | Status |
+|---------|--------|
+| List | Done |
+| Filter by active | Done |
+| JSON output | Done |
+| Invoice (by month) | Done |
+| Future installments | Done |
