@@ -75,14 +75,21 @@ function formatType(type: 'expense' | 'income' | 'transfer'): string {
   return config.color(config.label);
 }
 
+function toLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getDefaultDateRange(): { startDate: string; endDate: string } {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
   const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   return {
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0],
+    startDate: toLocalDateString(startDate),
+    endDate: toLocalDateString(endDate),
   };
 }
 
@@ -264,8 +271,8 @@ function getMonthRange(): { start: string; end: string } {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: toLocalDateString(start),
+    end: toLocalDateString(end),
   };
 }
 
@@ -323,7 +330,7 @@ async function createAction(options: CreateOptions): Promise<void> {
     const tipo = mapTypeToApi(options.type ?? 'expense');
     const isReconciled = !options.pending;
     const now = new Date();
-    const dateStr = options.date ?? now.toISOString().split('T')[0];
+    const dateStr = options.date ?? toLocalDateString(now);
     const { start: monthStart, end: monthEnd } = getMonthRange();
     const expenseNeedsNegativeValue = tipo === 'd';
     const finalValue = expenseNeedsNegativeValue ? -Math.abs(value) : Math.abs(value);
