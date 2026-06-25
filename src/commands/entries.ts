@@ -289,6 +289,12 @@ async function createAction(options: CreateOptions): Promise<void> {
       process.exit(1);
     }
 
+    if (!options.category) {
+      logger.error('A category is required to create an entry. Use -c, --category <id|alias>.');
+      logger.info('See available categories with: mdcli categories list');
+      process.exit(1);
+    }
+
     const accountId = resolveId('accounts', options.account);
     if (accountId === null) {
       logger.error(`Unknown account: ${options.account}`);
@@ -390,7 +396,7 @@ entriesCommand
   .requiredOption('-d, --description <text>', 'Entry description')
   .requiredOption('-v, --value <amount>', 'Entry value (positive number)')
   .option('-T, --type <type>', 'Entry type: expense, income, transfer (default: expense)', 'expense')
-  .option('-c, --category <id>', 'Category ID or alias')
+  .option('-c, --category <id>', 'Category ID or alias (required)')
   .option('-D, --date <date>', 'Entry date (YYYY-MM-DD), defaults to today')
   .option('-g, --tags <ids>', 'Tag ID(s) or alias(es), comma-separated')
   .option('-n, --notes <text>', 'Additional notes/observations')
