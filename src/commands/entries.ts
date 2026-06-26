@@ -25,26 +25,38 @@ function parseStatusFilter(input: string): number {
   const num = Number(input);
   if (!Number.isNaN(num) && num >= 0 && num <= 15) return num;
 
-  return input.split(',').reduce((mask, name) => {
+  const unknown: string[] = [];
+  const mask = input.split(',').reduce((acc, name) => {
     const flag = STATUS_FLAGS[name.trim().toLowerCase()];
-    if (!flag) {
-      logger.warning(`Unknown status: ${name}. Valid: pending, confirmed, reconciled, scheduled`);
-    }
-    return mask | (flag ?? 0);
+    if (!flag) unknown.push(name.trim());
+    return acc | (flag ?? 0);
   }, 0);
+
+  if (unknown.length > 0) {
+    logger.error(`Unknown status: ${unknown.join(', ')}. Valid: pending, confirmed, reconciled, scheduled`);
+    process.exit(1);
+  }
+
+  return mask;
 }
 
 function parseTypeFilter(input: string): number {
   const num = Number(input);
   if (!Number.isNaN(num) && num >= 0 && num <= 15) return num;
 
-  return input.split(',').reduce((mask, name) => {
+  const unknown: string[] = [];
+  const mask = input.split(',').reduce((acc, name) => {
     const flag = TYPE_FLAGS[name.trim().toLowerCase()];
-    if (!flag) {
-      logger.warning(`Unknown type: ${name}. Valid: expense, income, transfer-out, transfer-in`);
-    }
-    return mask | (flag ?? 0);
+    if (!flag) unknown.push(name.trim());
+    return acc | (flag ?? 0);
   }, 0);
+
+  if (unknown.length > 0) {
+    logger.error(`Unknown type: ${unknown.join(', ')}. Valid: expense, income, transfer-out, transfer-in`);
+    process.exit(1);
+  }
+
+  return mask;
 }
 
 function formatCurrency(value: number): string {
