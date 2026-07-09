@@ -38,6 +38,22 @@ Create a 1Password item with the following fields:
 - `password` - your password
 - `otp` - one-time password (configured as TOTP)
 
+### Optional: Proton Pass CLI
+
+For automatic login using Proton Pass when browser session extraction fails, install the [Proton Pass CLI](https://protonpass.github.io/pass-cli/):
+
+```bash
+# Using npm
+npm install -g @proton/pass-cli
+```
+
+Make sure you are logged into your Proton account in the CLI (`pass-cli login`). 
+
+Create a Proton Pass login item containing:
+- A username/email
+- A password
+- A TOTP/2FA authenticator field
+
 ### Optional: 2Captcha API Key
 
 If the login page shows a reCAPTCHA challenge, you can configure a [2Captcha](https://2captcha.com/) API key to automatically solve it:
@@ -69,10 +85,11 @@ mdcli auth login --session firefox
 
 If session extraction fails (e.g., not logged in, browser not found), you'll be prompted with fallback options:
 1. Use 1Password for automatic login
-2. Try Firefox session instead
-3. Open browser for manual login
-4. Enter credentials manually
-5. Cancel
+2. Use Proton Pass for automatic login
+3. Try Firefox session instead
+4. Open browser for manual login
+5. Enter credentials manually
+6. Cancel
 
 ### 1Password (Automatic)
 
@@ -82,6 +99,16 @@ mdcli auth login --item
 
 # Specify item name directly
 mdcli auth login --item "My Meu Dinheiro"
+```
+
+### Proton Pass (Automatic)
+
+```bash
+# Use Proton Pass item (prompts for reference path on first run)
+mdcli auth login --proton
+
+# Specify reference path directly (VaultName/ItemName)
+mdcli auth login --proton "Personal/Meu Dinheiro"
 ```
 
 ### Browser Login (Manual)
@@ -106,7 +133,7 @@ Shows your authentication status including the method used (Browser session, 1Pa
 # Remove the stored session
 mdcli auth logout
 
-# Also clear the saved 1Password item and 2Captcha key
+# Also clear the saved 1Password item, Proton Pass item, and 2Captcha key
 mdcli auth logout --all
 ```
 
@@ -186,7 +213,7 @@ mdcli tags delete 12345
 |---------|--------|
 | Browser session extraction (Chrome/Firefox) | Done |
 | Browser login (auto-capture) | Done |
-| Automatic login (1Password CLI) | Done |
+| Automatic login (1Password CLI & Proton Pass CLI) | Done |
 | Auto token refresh on 401 | Done |
 | Manual token entry | Done |
 | Status check | Done |
