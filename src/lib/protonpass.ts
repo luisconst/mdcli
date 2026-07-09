@@ -8,13 +8,20 @@ interface ProtonPassCredentials {
 
 export async function getCredentialsFromProtonPass(itemPath: string): Promise<ProtonPassCredentials> {
   try {
-    const username = (await $`pass-cli item view "pass://${itemPath}/username"`.text()).trim();
+    // Proton Pass uses 'email' as the field name for login items.
+    // Try 'email' first, fall back to 'username' for compatibility.
+    let username: string;
+    try {
+      username = (await $`pass-cli item view "pass://${itemPath}/email"`.text()).trim();
+    } catch {
+      username = (await $`pass-cli item view "pass://${itemPath}/username"`.text()).trim();
+    }
     const password = (await $`pass-cli item view "pass://${itemPath}/password"`.text()).trim();
     const otp = (await $`pass-cli item view "pass://${itemPath}/totp"`.text()).trim();
 
     if (!username || !password || !otp) {
       const missing = [];
-      if (!username) missing.push('username');
+      if (!username) missing.push('email/username');
       if (!password) missing.push('password');
       if (!otp) missing.push('totp');
       throw new Error(`Missing fields: ${missing.join(', ')}`);

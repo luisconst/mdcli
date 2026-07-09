@@ -184,14 +184,29 @@ function parseFirefoxProfilesIni(iniPath: string): FirefoxProfile[] {
 
 function getFirefoxProfilePath(): string {
   const platform = process.platform;
-  const firefoxDir = FIREFOX_PROFILE_PARENT_PATHS[platform];
+  let firefoxDir = process.env.MDCLI_FIREFOX_PROFILE || FIREFOX_PROFILE_PARENT_PATHS[platform];
 
   if (!firefoxDir) {
     throw new Error(`Unsupported platform: ${platform}. Only macOS, Windows, and Linux are supported.`);
   }
 
+  // On Linux, check common snap, flatpak, and standard profile directory locations if default profiles.ini is missing
+  if (platform === 'linux' && !process.env.MDCLI_FIREFOX_PROFILE && !existsSync(join(firefoxDir, 'profiles.ini'))) {
+    const candidates = [
+      join(homedir(), '.mozilla', 'firefox'),
+      join(homedir(), 'snap', 'firefox', 'common', '.mozilla', 'firefox'),
+      join(homedir(), '.var', 'app', 'org.mozilla.firefox', '.mozilla', 'firefox'),
+    ];
+    for (const cand of candidates) {
+      if (existsSync(join(cand, 'profiles.ini'))) {
+        firefoxDir = cand;
+        break;
+      }
+    }
+  }
+
   if (!existsSync(firefoxDir)) {
-    throw new Error(`Firefox not found. Expected at: ${firefoxDir}\nTry: mdcli auth login --session chrome or --browser`);
+    throw new Error(`Firefox profile directory not found. Expected at: ${firefoxDir}\nTry: mdcli auth login --session chrome or --browser`);
   }
 
   const profilesIniPath = join(firefoxDir, 'profiles.ini');
