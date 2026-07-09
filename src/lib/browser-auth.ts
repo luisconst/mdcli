@@ -1,6 +1,7 @@
 import puppeteer, { type Page, type Browser } from 'puppeteer';
 import type { AuthConfig } from '../types/index.js';
 import { getCredentialsFromOnePassword } from './onepassword.js';
+import { getCredentialsFromProtonPass } from './protonpass.js';
 import { detectRecaptchaChallenge, solveRecaptcha } from './captcha.js';
 
 const LOGIN_URL = 'https://app.meudinheiroweb.com.br/';
@@ -183,8 +184,13 @@ function headersToAuthConfig(headers: CapturedHeaders): AuthConfig {
   };
 }
 
-export async function captureAuthHeadless(opItemName: string): Promise<AuthConfig> {
-  const credentials = await getCredentialsFromOnePassword(opItemName);
+export async function captureAuthHeadless(
+  itemName: string,
+  source: '1password' | 'protonpass'
+): Promise<AuthConfig> {
+  const credentials = source === '1password'
+    ? await getCredentialsFromOnePassword(itemName)
+    : await getCredentialsFromProtonPass(itemName);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -192,7 +198,7 @@ export async function captureAuthHeadless(opItemName: string): Promise<AuthConfi
   });
 
   try {
-    const auth = await performHeadlessLogin(browser, credentials, opItemName);
+    const auth = await performHeadlessLogin(browser, credentials, itemName, source);
     return auth;
   } finally {
     await browser.close();
@@ -248,7 +254,12 @@ async function fillOtpForm(page: Page, otp: string): Promise<void> {
   await page.click(SELECTORS.continueButton);
 }
 
-async function retryOtpIfInvalid(page: Page, opItemName: string, maxRetries = 3): Promise<void> {
+async function retryOtpIfInvalid(
+  page: Page,
+  itemName: string,
+  source: '1password' | 'protonpass',
+  maxRetries = 3
+): Promise<void> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -263,7 +274,9 @@ async function retryOtpIfInvalid(page: Page, opItemName: string, maxRetries = 3)
 
     console.log(`OTP invalid, fetching fresh code (attempt ${attempt + 1}/${maxRetries})...`);
 
-    const freshCredentials = await getCredentialsFromOnePassword(opItemName);
+    const freshCredentials = source === '1password'
+      ? await getCredentialsFromOnePassword(itemName)
+      : await getCredentialsFromProtonPass(itemName);
 
     await clearInput(page, SELECTORS.otpInput);
     await page.type(SELECTORS.otpInput, freshCredentials.otp);
@@ -291,7 +304,8 @@ async function waitForAuthCapture(
 async function performHeadlessLogin(
   browser: Browser,
   credentials: LoginCredentials,
-  opItemName: string
+  itemName: string,
+  source: '1password' | 'protonpass'
 ): Promise<AuthConfig> {
   const page = await browser.newPage();
   const capturedRef: { headers: CapturedHeaders | null } = { headers: null };
@@ -303,7 +317,7 @@ async function performHeadlessLogin(
   await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
   await fillLoginForm(page, credentials.username, credentials.password);
   await fillOtpForm(page, credentials.otp);
-  await retryOtpIfInvalid(page, opItemName);
+  await retryOtpIfInvalid(page, itemName, source);
 
   const capturedHeaders = await waitForAuthCapture(capturedRef);
   const auth = headersToAuthConfig(capturedHeaders);

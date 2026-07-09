@@ -11,6 +11,8 @@ import {
   getFullConfig,
   getOpItem,
   setOpItem,
+  getProtonItem,
+  setProtonItem,
   getCaptchaApiKey,
   setCaptchaApiKey,
 } from '../lib/config.js';
@@ -62,11 +64,28 @@ async function resolveOpItemName(providedItem?: string): Promise<string> {
   });
 }
 
+async function resolveProtonItemName(providedItem?: string): Promise<string> {
+  if (providedItem) {
+    return providedItem;
+  }
+
+  const savedItem = getProtonItem();
+  if (savedItem) {
+    return savedItem;
+  }
+
+  return input({
+    message: 'Proton Pass item reference path (e.g. "VaultName/ItemName"):',
+    default: 'Personal/MeuDinheiroWeb',
+  });
+}
+
 async function loginAction(options: {
   manual?: boolean;
   browser?: boolean;
   session?: boolean | string;
   item?: string;
+  proton?: string;
   captchaKey?: string;
 }): Promise<void> {
   try {
@@ -99,13 +118,26 @@ async function loginAction(options: {
       const isNewItem = getOpItem() !== itemName;
 
       logger.info(`Starting automatic authentication via 1Password (${itemName})...`);
-      auth = await captureAuthHeadless(itemName);
+      auth = await captureAuthHeadless(itemName, '1password');
       method = '1password';
 
       if (isNewItem) {
         setOpItem(itemName);
         logger.info(`1Password item "${itemName}" saved to config.`);
         logger.info('To change it, run: mdcli auth login --item <new-name>');
+      }
+    } else if (options.proton) {
+      const itemName = await resolveProtonItemName(options.proton);
+      const isNewItem = getProtonItem() !== itemName;
+
+      logger.info(`Starting automatic authentication via Proton Pass (${itemName})...`);
+      auth = await captureAuthHeadless(itemName, 'protonpass');
+      method = 'protonpass';
+
+      if (isNewItem) {
+        setProtonItem(itemName);
+        logger.info(`Proton Pass item "${itemName}" saved to config.`);
+        logger.info('To change it, run: mdcli auth login --proton <new-path>');
       }
     } else {
       try {
@@ -121,6 +153,7 @@ async function loginAction(options: {
           message: 'How would you like to authenticate?',
           choices: [
             { value: '1password', name: '1Password (automatic login)' },
+            { value: 'protonpass', name: 'Proton Pass (automatic login)' },
             { value: 'firefox', name: 'Try Firefox session instead' },
             { value: 'browser', name: 'Open browser for manual login' },
             { value: 'manual', name: 'Enter credentials manually' },
@@ -138,13 +171,26 @@ async function loginAction(options: {
           const isNewItem = getOpItem() !== itemName;
 
           logger.info(`Starting automatic authentication via 1Password (${itemName})...`);
-          auth = await captureAuthHeadless(itemName);
+          auth = await captureAuthHeadless(itemName, '1password');
           method = '1password';
 
           if (isNewItem) {
             setOpItem(itemName);
             logger.info(`1Password item "${itemName}" saved to config.`);
             logger.info('To change it, run: mdcli auth login --item <new-name>');
+          }
+        } else if (fallbackChoice === 'protonpass') {
+          const itemName = await resolveProtonItemName(undefined);
+          const isNewItem = getProtonItem() !== itemName;
+
+          logger.info(`Starting automatic authentication via Proton Pass (${itemName})...`);
+          auth = await captureAuthHeadless(itemName, 'protonpass');
+          method = 'protonpass';
+
+          if (isNewItem) {
+            setProtonItem(itemName);
+            logger.info(`Proton Pass item "${itemName}" saved to config.`);
+            logger.info('To change it, run: mdcli auth login --proton <new-path>');
           }
         } else if (fallbackChoice === 'firefox') {
           logger.info('Extracting session from Firefox...');
@@ -178,6 +224,7 @@ function formatAuthMethod(method: AuthMethod | null): string {
     'browser-chrome': 'Browser session (Chrome)',
     'browser-firefox': 'Browser session (Firefox)',
     '1password': '1Password',
+    'protonpass': 'Proton Pass',
     'browser-manual': 'Browser (manual login)',
     'manual': 'Manual entry',
   };
@@ -191,6 +238,7 @@ function statusAction(): void {
   const auth = getAuth();
   const authMethod = getAuthMethod();
   const opItem = getOpItem();
+  const protonItem = getProtonItem();
   const captchaKey = getCaptchaApiKey();
 
   logger.header('Authentication Status');
@@ -200,6 +248,7 @@ function statusAction(): void {
   logger.kv('Authenticated', hasAuth() ? 'Yes' : 'No');
   logger.kv('Auth method', auth ? formatAuthMethod(authMethod) : null);
   logger.kv('1Password item', opItem ?? '(not configured)');
+  logger.kv('Proton Pass item', protonItem ?? '(not configured)');
   logger.kv('2captcha API key', captchaKey ? `${captchaKey.slice(0, 8)}...` : '(not configured)');
 
   if (auth) {
@@ -223,7 +272,7 @@ function logoutAction(options: { all?: boolean }): void {
   }
 
   if (options.all) {
-    logger.info('Also cleared the saved 1Password item and 2captcha API key.');
+    logger.info('Also cleared the saved 1Password item, Proton Pass item, and 2captcha API key.');
   }
 
   logger.log(`  Config file: ${getConfigPath()}`);
@@ -234,11 +283,12 @@ export const authCommand = new Command('auth')
 
 authCommand
   .command('login')
-  .description('Authenticate with Meu Dinheiro (uses 1Password by default)')
+  .description('Authenticate with Meu Dinheiro (uses 1Password or Proton Pass by default)')
   .option('-m, --manual', 'Manually enter authentication headers')
   .option('-b, --browser', 'Open browser for manual login')
   .option('-s, --session [browser]', 'Extract session from browser profile (chrome|firefox)')
   .option('-i, --item <name>', '1Password item name (saved to config)')
+  .option('-p, --proton <path>', 'Proton Pass item reference path in "VaultName/ItemName" format (saved to config)')
   .option('-c, --captcha-key <key>', '2captcha API key for solving reCAPTCHA (saved to config)')
   .action(loginAction);
 

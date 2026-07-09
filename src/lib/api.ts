@@ -22,7 +22,7 @@ import type {
   CreateTagPayload,
   CreateTagResponse,
 } from '../types/index.js';
-import { getAuth, setAuth, getOpItem, invalidateNameCache } from './config.js';
+import { getAuth, setAuth, getOpItem, getProtonItem, invalidateNameCache } from './config.js';
 import { popStaleNameCacheUse } from './cache-invalidation.js';
 import { captureAuthHeadless } from './browser-auth.js';
 import { extractSessionFromBrowser } from './browser-session.js';
@@ -60,17 +60,24 @@ async function refreshAuthAndRetry<T>(
       console.log('✓ Token refreshed successfully via browser session');
     } catch {
       const opItem = getOpItem();
-      if (!opItem) {
+      const protonItem = getProtonItem();
+
+      if (opItem) {
+        console.log('⚠ Browser session failed, falling back to 1Password...');
+        newAuth = await captureAuthHeadless(opItem, '1password');
+        setAuth(newAuth, '1password');
+        console.log('✓ Token refreshed successfully via 1Password');
+      } else if (protonItem) {
+        console.log('⚠ Browser session failed, falling back to Proton Pass...');
+        newAuth = await captureAuthHeadless(protonItem, 'protonpass');
+        setAuth(newAuth, 'protonpass');
+        console.log('✓ Token refreshed successfully via Proton Pass');
+      } else {
         throw new Error(
-          'Authentication expired. Browser session extraction failed and no 1Password item configured.\n' +
+          'Authentication expired. Browser session extraction failed and no password manager configured.\n' +
             'Run "mdcli auth login" to re-authenticate.'
         );
       }
-
-      console.log('⚠ Browser session failed, falling back to 1Password...');
-      newAuth = await captureAuthHeadless(opItem);
-      setAuth(newAuth, '1password');
-      console.log('✓ Token refreshed successfully via 1Password');
     }
 
     const response = await requestFn(newAuth);

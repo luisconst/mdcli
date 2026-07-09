@@ -54,6 +54,7 @@ export function clearAuth(includePreferences = false): void {
   delete config.lastUpdated;
   if (includePreferences) {
     delete config.opItem;
+    delete config.protonItem;
     delete config.captchaApiKey;
   }
   saveConfig(config);
@@ -115,6 +116,17 @@ export function getOpItem(): string | null {
 export function setOpItem(itemName: string): void {
   const config = loadConfig();
   config.opItem = itemName;
+  saveConfig(config);
+}
+
+export function getProtonItem(): string | null {
+  const config = loadConfig();
+  return config.protonItem ?? null;
+}
+
+export function setProtonItem(itemName: string): void {
+  const config = loadConfig();
+  config.protonItem = itemName;
   saveConfig(config);
 }
 
