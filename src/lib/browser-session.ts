@@ -235,6 +235,7 @@ function getFirefoxProfilePath(): string {
   if (platform === 'linux' && !process.env.MDCLI_FIREFOX_PROFILE && !existsSync(join(firefoxDir, 'profiles.ini'))) {
     const candidates = [
       join(homedir(), '.mozilla', 'firefox'),
+      join(homedir(), '.config', 'mozilla', 'firefox'),
       join(homedir(), 'snap', 'firefox', 'common', '.mozilla', 'firefox'),
       join(homedir(), '.var', 'app', 'org.mozilla.firefox', '.mozilla', 'firefox'),
     ];
