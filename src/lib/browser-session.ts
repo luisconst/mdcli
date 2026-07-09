@@ -182,6 +182,47 @@ function parseFirefoxProfilesIni(iniPath: string): FirefoxProfile[] {
   return profiles;
 }
 
+function getFirefoxExecutablePath(): string | undefined {
+  const platform = process.platform;
+
+  if (platform === 'darwin') {
+    const paths = [
+      '/Applications/Firefox.app/Contents/MacOS/firefox-bin',
+      join(homedir(), 'Applications', 'Firefox.app', 'Contents', 'MacOS', 'firefox-bin'),
+    ];
+    for (const p of paths) {
+      if (existsSync(p)) return p;
+    }
+  } else if (platform === 'win32') {
+    const paths = [
+      join(process.env.PROGRAMFILES || 'C:\\Program Files', 'Mozilla Firefox', 'firefox.exe'),
+      join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Mozilla Firefox', 'firefox.exe'),
+      join(process.env.LOCALAPPDATA || '', 'Mozilla Firefox', 'firefox.exe'),
+    ];
+    for (const p of paths) {
+      if (existsSync(p)) return p;
+    }
+  } else if (platform === 'linux') {
+    const paths = [
+      '/usr/bin/firefox',
+      '/usr/local/bin/firefox',
+      '/snap/bin/firefox',
+    ];
+    for (const p of paths) {
+      if (existsSync(p)) return p;
+    }
+    try {
+      const whichPath = execSync('which firefox', { encoding: 'utf-8' }).trim();
+      if (whichPath && existsSync(whichPath)) {
+        return whichPath;
+      }
+    } catch {
+      // Ignored
+    }
+  }
+  return undefined;
+}
+
 function getFirefoxProfilePath(): string {
   const platform = process.platform;
   let firefoxDir = process.env.MDCLI_FIREFOX_PROFILE || FIREFOX_PROFILE_PARENT_PATHS[platform];
@@ -271,9 +312,12 @@ export async function extractSessionFromBrowser(
     tempDir = await copyProfileToTemp(profilePath);
 
     const browserLauncher = browserType === 'chrome' ? chromium : firefox;
+    const firefoxExecutable = browserType === 'firefox' ? getFirefoxExecutablePath() : undefined;
+
     const context = await browserLauncher.launchPersistentContext(tempDir, {
       headless: true,
       channel: browserType === 'chrome' ? 'chrome' : undefined,
+      executablePath: firefoxExecutable,
     });
 
     try {
